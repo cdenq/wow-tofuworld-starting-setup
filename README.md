@@ -10,13 +10,13 @@ Tofu Worldview module for the mod-playerbots fork of AzerothCore (3.3.5a). Writt
 
 ## Files
 
-- `src/starting_setup.cpp`, `src/starting_setup_loader.cpp`: the module. The folder must be named `wow-tofuworld-starting-setup`, because the core calls `Addwow_tofuworld_starting_setupScripts()`.
+- `src/starting_setup.cpp`, `src/starting_setup_loader.cpp`: the module. The repo is `wow-tofuworld-starting-setup`, but its folder in the deploy set must be named `mod-tofu-starting-setup`, because the core calls `Addmod_tofu_starting_setupScripts()` (Add + folder name with "-" as "_" + Scripts).
 - `conf/starting_setup.conf.dist`: every setting, with descriptions.
 - `data/sql/db-characters/tofu_starting_setup_01_table.sql`: the tracking table (applied by the worldserver's updater, state MODULE).
 
 ## Install
 
-1. Put the repo in the deploy set: `C:\Users\chris\Desktop\WoW Projects\modules\wow-tofuworld-starting-setup` (committed, on a branch).
+1. Put the repo in the deploy set as `C:\Users\chris\Desktop\WoW Projects\modules\mod-tofu-starting-setup` (committed, on a branch).
 2. Run `Update Source.bat` (Rebuild anyway if nothing else changed).
 3. Copy `C:\Build\bin\RelWithDebInfo\configs\modules\starting_setup.conf.dist` to `starting_setup.conf` in the same folder and edit it.
 4. Keep `StartPlayerMoney = 0` in worldserver.conf, or new characters get gold twice.
