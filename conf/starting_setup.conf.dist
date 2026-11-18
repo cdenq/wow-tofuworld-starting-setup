@@ -1,0 +1,177 @@
+################################################################################
+# wow-tofuworld-starting-setup (Tofu Worldview)
+#
+# Copy to configs/modules/starting_setup.conf and edit. Changes take effect at the
+# next worldserver start, or after ".reload config" in the worldserver console.
+################################################################################
+
+[worldserver]
+
+#
+#    StartingSetup.Enable
+#        Description: Turns the whole module on or off (kit and auto-join).
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+StartingSetup.Enable = 1
+
+#
+#    StartingSetup.Announce
+#        Description: Tell the player in chat when the starting kit is given or mailed.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+StartingSetup.Announce = 1
+
+################################################################################
+# STARTING KIT
+#
+# Given once per character: new characters at their first login (bags equipped,
+# items equipped or put in the backpack, gold added; anything that does not fit
+# is mailed). Random bots and addclass bots never get it; altbots do.
+################################################################################
+
+#
+#    StartingSetup.ExistingCharacters
+#        Description: Also give the kit, by mail, to characters created before the
+#                     module was installed, at their next login.
+#        Default:     0 - (Only new characters)
+#                     1 - (New and existing characters)
+
+StartingSetup.ExistingCharacters = 0
+
+#
+#    StartingSetup.WeaponSkills
+#        Description: Weapon proficiencies to learn (skill goes to max with AlwaysMaxWeaponSkill = 1).
+#        Default:     1 - (Every weapon the class can normally train)
+#                     0 - (None)
+#                     2 - (Every weapon for every class; off-class weapons are removed by the
+#                          core at each login and re-learned by this module, with a "You have
+#                          learned" message and a worldserver log line per weapon each login)
+
+StartingSetup.WeaponSkills = 1
+
+#
+#    StartingSetup.Gold
+#        Description: Money given with the kit, in copper (100 copper = 1 silver).
+#                     Keep StartPlayerMoney in worldserver.conf at 0, or it is given twice.
+#        Default:     1000 - (10 silver)
+
+StartingSetup.Gold = 1000
+
+#
+#    StartingSetup.Bags.Ids
+#        Description: Bag item IDs. Each bag given is picked at random from this list.
+#        Default:     "4496,5572,805,828,5571"
+
+StartingSetup.Bags.Ids = "4496,5572,805,828,5571"
+
+#
+#    StartingSetup.Bags.Count
+#        Description: How many bags to give (0 to 4).
+#        Default:     1
+
+StartingSetup.Bags.Count = 1
+
+#
+#    StartingSetup.Items
+#        Description: Items every character gets, as "id:count,id:count" (":count" may be left out for 1).
+#                     Unknown item IDs are skipped with an error in the worldserver log.
+#        Default:     "" - (None)
+
+StartingSetup.Items = ""
+
+#
+#    StartingSetup.Items.Class.<class id>
+#        Description: Extra items for one class, same format as StartingSetup.Items.
+#                     1 Warrior, 2 Paladin, 3 Hunter, 4 Rogue, 5 Priest, 6 Death Knight,
+#                     7 Shaman, 8 Mage, 9 Warlock, 11 Druid
+#        Default:     "" - (None)
+
+StartingSetup.Items.Class.1 = ""
+StartingSetup.Items.Class.2 = ""
+StartingSetup.Items.Class.3 = ""
+StartingSetup.Items.Class.4 = ""
+StartingSetup.Items.Class.5 = ""
+StartingSetup.Items.Class.6 = ""
+StartingSetup.Items.Class.7 = ""
+StartingSetup.Items.Class.8 = ""
+StartingSetup.Items.Class.9 = ""
+StartingSetup.Items.Class.11 = ""
+
+#
+#    StartingSetup.KitMail.Subject
+#    StartingSetup.KitMail.Body
+#        Description: Subject and text of the mail that carries kit items that did not fit
+#                     (new characters) or the whole kit (existing characters).
+#        Default:     "Your starting kit"
+#                     "Welcome to Tofu Worldview. Here is your starting kit."
+
+StartingSetup.KitMail.Subject = "Your starting kit"
+StartingSetup.KitMail.Body = "Welcome to Tofu Worldview. Here is your starting kit."
+
+################################################################################
+# WELCOME MAIL
+#
+# Sent once per character together with the kit (same rules: new characters, and
+# existing characters only when StartingSetup.ExistingCharacters = 1).
+################################################################################
+
+#
+#    StartingSetup.Mail.Enable
+#        Description: Send the welcome mail.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+
+StartingSetup.Mail.Enable = 0
+
+#
+#    StartingSetup.Mail.Sender
+#        Description: Creature entry shown as the sender, or 0 for a system (GM) mail.
+#        Default:     0
+
+StartingSetup.Mail.Sender = 0
+
+#
+#    StartingSetup.Mail.Subject
+#    StartingSetup.Mail.Body
+#        Description: Subject and text of the welcome mail.
+#        Default:     ""
+
+StartingSetup.Mail.Subject = ""
+StartingSetup.Mail.Body = ""
+
+#
+#    StartingSetup.Mail.Gold
+#        Description: Money attached to the welcome mail, in copper.
+#        Default:     0
+
+StartingSetup.Mail.Gold = 0
+
+#
+#    StartingSetup.Mail.Items
+#        Description: Items attached, as "id:count,id:count". More than 12 stacks are split
+#                     over several mails.
+#        Default:     "" - (None)
+
+StartingSetup.Mail.Items = ""
+
+################################################################################
+# AUTO-JOIN CHANNEL
+################################################################################
+
+#
+#    StartingSetup.AutoJoin.Enable
+#        Description: Put every character, bots included, in the channel at every login.
+#        Default:     1 - (Enabled)
+#                     0 - (Disabled)
+
+StartingSetup.AutoJoin.Enable = 1
+
+#
+#    StartingSetup.AutoJoin.Channel
+#        Description: Channel name. One channel for both factions when
+#                     AllowTwoSide.Interaction.Channel = 1 in worldserver.conf.
+#        Default:     "World"
+
+StartingSetup.AutoJoin.Channel = "World"
