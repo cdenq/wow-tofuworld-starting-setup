@@ -4,6 +4,9 @@
  * - Starting kit, once per character: weapon proficiencies, gold, random bag(s), items, welcome mail.
  *   New characters get it on first login; existing characters only when StartingSetup.ExistingCharacters = 1 (by mail).
  *   Random bots and addclass bots never get it; altbots (player-made characters) do.
+ * - The kit record is keyed by character GUID. The core reuses the GUID of a deleted newest character after a restart
+ *   (next GUID = MAX(characters.guid) + 1), so the record is deleted with the character, orphan records are purged at
+ *   startup, and a record older than the character's creation date is ignored.
  * - Every character joins the configured channel (default "World") at every login.
  *   The client's own rejoin then triggers an "already on the channel" notice, which is dropped.
  *
@@ -207,9 +210,29 @@ namespace
         return sRandomPlayerbotMgr.IsRandomBot(player) || sRandomPlayerbotMgr.IsAddclassBot(player);
     }
 
+    // A record counts only if it was written after this character was created. An older record belongs to a deleted
+    // character whose GUID the core has handed out again; it is ignored and replaced when this character gets its kit.
     bool HasKitRecord(Player* player)
     {
-        return CharacterDatabase.Query("SELECT 1 FROM tofu_starting_setup WHERE guid = {}", player->GetGUID().GetCounter()) != nullptr;
+        uint32 guid = player->GetGUID().GetCounter();
+        QueryResult result = CharacterDatabase.Query("SELECT t.granted_at >= c.creation_date FROM tofu_starting_setup t JOIN characters c ON c.guid = t.guid WHERE t.guid = {}", guid);
+        if (!result)
+            return false;
+        if ((*result)[0].Get<int64>())
+            return true;
+        LOG_INFO("module", "StartingSetup: character {} (GUID {}) reuses the GUID of a deleted character; its old kit record is ignored.", player->GetName(), guid);
+        return false;
+    }
+
+    // Removes kit records whose character no longer exists (records left by deletions before this fix).
+    void PurgeOrphanRecords()
+    {
+        QueryResult result = CharacterDatabase.Query("SELECT COUNT(*) FROM tofu_starting_setup t LEFT JOIN characters c ON c.guid = t.guid WHERE c.guid IS NULL");
+        uint64 count = result ? (*result)[0].Get<uint64>() : 0;
+        if (!count)
+            return;
+        CharacterDatabase.DirectExecute("DELETE t FROM tofu_starting_setup t LEFT JOIN characters c ON c.guid = t.guid WHERE c.guid IS NULL");
+        LOG_INFO("module", "StartingSetup: removed {} kit record(s) of deleted characters.", count);
     }
 
     // Mode 1: only what the class can normally train (same test trainers use). Mode 2: all of them.
@@ -330,7 +353,8 @@ namespace
         if (settings.mailEnable)
             SendMails(player, WelcomeSender(player), settings.mailSubject, settings.mailBody, settings.mailGold, CreateMailItems(player, settings.mailItems, trans), trans);
 
-        trans->Append("INSERT IGNORE INTO tofu_starting_setup (guid) VALUES ({})", player->GetGUID().GetCounter());
+        // REPLACE also overwrites an ignored record of a deleted character with the same GUID.
+        trans->Append("REPLACE INTO tofu_starting_setup (guid, granted_at) VALUES ({}, CURRENT_TIMESTAMP)", player->GetGUID().GetCounter());
         CharacterDatabase.CommitTransaction(trans);
 
         // Save the character now so the kit and the record cannot get out of step after a crash.
@@ -366,13 +390,20 @@ public:
     void OnStartup() override
     {
         ValidateSettings();
+        PurgeOrphanRecords();
     }
 };
 
 class StartingSetupPlayerScript : public PlayerScript
 {
 public:
-    StartingSetupPlayerScript() : PlayerScript("StartingSetupPlayerScript", { PLAYERHOOK_ON_LOGIN }) { }
+    StartingSetupPlayerScript() : PlayerScript("StartingSetupPlayerScript", { PLAYERHOOK_ON_LOGIN, PLAYERHOOK_ON_DELETE_FROM_DB }) { }
+
+    // Runs inside the core's character-delete transaction, so the record goes with the character.
+    void OnPlayerDeleteFromDB(CharacterDatabaseTransaction trans, uint32 guid) override
+    {
+        trans->Append("DELETE FROM tofu_starting_setup WHERE guid = {}", guid);
+    }
 
     void OnPlayerLogin(Player* player) override
     {
