@@ -182,7 +182,7 @@ StartingSetup.PvPDefaultOn.RandomBots = 0
 
 #
 #    StartingSetup.AutoJoin.Enable
-#        Description: Put a new character in the channel at its first login. Bots join at every login (they have no client to remember channels). Players are not rejoined later, so a character that leaves the channel stays out.
+#        Description: Put a new character in the channel at its first login (3 seconds after login, once the client has loaded). Bots join at every login (they have no client to remember channels). Players are not rejoined later, so a character that leaves the channel stays out.
 #        Default:     1 - (Enabled)
 #                     0 - (Disabled)
 

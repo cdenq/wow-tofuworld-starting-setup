@@ -25,19 +25,16 @@
 #include "Log.h"
 #include "Mail.h"
 #include "ObjectMgr.h"
-#include "Opcodes.h"
 #include "Player.h"
 #include "Random.h"
 #include "RandomPlayerbotMgr.h"
 #include "ScriptMgr.h"
 #include "StringConvert.h"
 #include "Tokenize.h"
-#include "WorldPacket.h"
 #include "WorldSession.h"
 
 #include <algorithm>
 #include <array>
-#include <cctype>
 #include <string>
 #include <utility>
 #include <vector>
@@ -65,8 +62,8 @@ namespace
         5009   // Wands
     };
 
-    // SMSG_CHANNEL_NOTIFY type for "[%s] Player %s is already on the channel." (Channel.h, CHAT_PLAYER_ALREADY_MEMBER_NOTICE)
-    constexpr uint8 NotifyAlreadyMember = 0x17;
+    // A join sent during login is dropped by the client (the server counts the player as a member, the client does not), so a player's first-login join waits until the client has loaded.
+    constexpr Milliseconds AutoJoinDelay = Milliseconds(3000);
 
     using ItemList = std::vector<std::pair<uint32, uint32>>; // item entry, count
 
@@ -93,16 +90,9 @@ namespace
         bool pvpRandomBots = false;
         bool autoJoinEnable = true;
         std::string autoJoinChannel = "World";
-        std::string autoJoinChannelLower = "world";
     };
 
     Settings settings;
-
-    std::string ToLowerAscii(std::string s)
-    {
-        std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-        return s;
-    }
 
     // "id:count,id:count" or "id,id" (count 1). Malformed entries are logged and skipped; unknown items are removed by ValidateSettings.
     ItemList ParseItemList(std::string const& key, std::string const& value)
@@ -174,7 +164,6 @@ namespace
         s.autoJoinChannel = sConfigMgr->GetOption<std::string>("StartingSetup.AutoJoin.Channel", "World");
         if (s.autoJoinChannel.empty())
             s.autoJoinEnable = false;
-        s.autoJoinChannelLower = ToLowerAscii(s.autoJoinChannel);
 
         settings = std::move(s);
     }
@@ -430,10 +419,22 @@ public:
         // Still set here: the core clears it only after OnPlayerLogin (CharacterHandler.cpp).
         bool newCharacter = player->HasAtLoginFlag(AT_LOGIN_FIRST);
 
-        // Bots have no client to remember channels, so they join at every login. A real client saves its channels per character and rejoins them itself, so players join only on a new character's first login, and a manual /leave sticks.
-        bool headless = player->GetSession() && player->GetSession()->IsHeadless();
-        if (settings.autoJoinEnable && (headless || newCharacter))
-            JoinChannel(player);
+        // Bots have no client to remember channels, so they join at every login. A real client saves its channels per character and rejoins them itself, so players join only on a new character's first login (delayed, see AutoJoinDelay), and a manual /leave sticks.
+        if (settings.autoJoinEnable)
+        {
+            bool headless = player->GetSession() && player->GetSession()->IsHeadless();
+            if (headless)
+                JoinChannel(player);
+            else if (newCharacter)
+            {
+                // The event belongs to the player, so it is dropped if the player logs out first.
+                player->m_Events.AddEventAtOffset([player]()
+                {
+                    if (settings.enable && settings.autoJoinEnable && player->IsInWorld())
+                        JoinChannel(player);
+                }, AutoJoinDelay);
+            }
+        }
 
         if (sRandomPlayerbotMgr.IsRandomBot(player))
         {
@@ -460,37 +461,8 @@ public:
     }
 };
 
-class StartingSetupServerScript : public ServerScript
-{
-public:
-    StartingSetupServerScript() : ServerScript("StartingSetupServerScript", { SERVERHOOK_CAN_PACKET_SEND }) { }
-
-    // Drops "[World] Player X is already on the channel." caused by the client rejoining a channel the module already joined.
-    bool CanPacketSend(WorldSession* /*session*/, WorldPacket const& packet) override
-    {
-        if (packet.GetOpcode() != SMSG_CHANNEL_NOTIFY || !settings.enable || !settings.autoJoinEnable)
-            return true;
-
-        uint8 const* data = packet.contents();
-        std::size_t size = packet.size();
-        if (size < 2 || data[0] != NotifyAlreadyMember)
-            return true;
-
-        // Layout: uint8 type, null-terminated channel name, guid.
-        std::size_t end = 1;
-        while (end < size && data[end] != 0)
-            ++end;
-        if (end >= size)
-            return true;
-
-        std::string name(reinterpret_cast<char const*>(data + 1), end - 1);
-        return ToLowerAscii(name) != settings.autoJoinChannelLower;
-    }
-};
-
 void AddSC_wow_tofuworld_starting_setup()
 {
     new StartingSetupWorldScript();
     new StartingSetupPlayerScript();
-    new StartingSetupServerScript();
 }
