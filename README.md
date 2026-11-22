@@ -7,6 +7,7 @@ Tofu Worldview module for the mod-playerbots fork of AzerothCore (3.3.5a). Writt
 - Starting kit, once per character: weapon proficiencies, gold, random bag(s), items, and an optional welcome mail. New characters get it at first login; existing characters only with `StartingSetup.ExistingCharacters = 1`, by mail. Random bots and addclass bots never get it; altbots (player-made characters) do. Recorded in `acore_characters.tofu_starting_setup`.
 - Weapon skills: mode 1 learns every weapon the class can normally train (the trainers' own check, so mod-uac combinations are covered); mode 2 learns every weapon for every class, re-learned at each login because the core removes off-class skills when a character loads.
 - A new character joins the configured channel (default `World`) at its first login; after that the client rejoins it on its own, and a character that leaves with `/leave World` stays out. Bots (headless sessions) join at every login, since they have no client. The "already on the channel" notice is dropped.
+- PvP on by default (both off in the dist): `StartingSetup.PvPDefaultOn = 1` turns `/pvp` on for a new player-made character at its first login, once. The core saves `PLAYER_FLAGS_IN_PVP` in `characters.playerFlags` and restores it at login, so a later `/pvp` off sticks. `StartingSetup.PvPDefaultOn.RandomBots = 1` turns it on for every random bot at every login, so bots fight flagged enemies in the open world (playerbots' `pvp` strategy). Meant for a Normal realm (`GameType = 0`).
 
 ## Files
 
@@ -28,3 +29,4 @@ Tofu Worldview module for the mod-playerbots fork of AzerothCore (3.3.5a). Writt
 - `SHOW CREATE TABLE acore_characters.tofu_starting_setup;` returns the table.
 - New character: bag equipped, 10 silver, class weapon skills in the skill tab, in /2 or /3 World, no "already on the channel" line; after a relog still in World, no second kit. `/leave World`, relog: not in World.
 - `SELECT * FROM acore_characters.tofu_starting_setup;` has a row for it.
+- With `PvPDefaultOn = 1`: the new character's portrait shows the PvP flag; `/pvp`, wait out the timer, relog: still unflagged. With `.RandomBots = 1`: target any random bot in the open world; its portrait shows the PvP flag.

@@ -157,6 +157,26 @@ StartingSetup.Mail.Gold = 0
 StartingSetup.Mail.Items = ""
 
 ################################################################################
+# PVP ON BY DEFAULT
+################################################################################
+
+#
+#    StartingSetup.PvPDefaultOn
+#        Description: Turn /pvp on for a new player-made character (altbots included) at its first login, once. The core saves the PvP flag with the character and restores it at login, so a player who types /pvp to turn it off stays off. Existing characters are not changed. Meant for a Normal realm (GameType 0); on a PvP realm the core flags everyone in contested and enemy zones anyway.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+
+StartingSetup.PvPDefaultOn = 0
+
+#
+#    StartingSetup.PvPDefaultOn.RandomBots
+#        Description: Turn /pvp on for every random bot at every login, so random bots fight flagged enemies (bots and players) in the open world. Addclass bots are not changed.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+
+StartingSetup.PvPDefaultOn.RandomBots = 0
+
+################################################################################
 # AUTO-JOIN CHANNEL
 ################################################################################
 

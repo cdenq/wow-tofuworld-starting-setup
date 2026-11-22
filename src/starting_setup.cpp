@@ -7,6 +7,9 @@
  * - The kit record is keyed by character GUID. The core reuses the GUID of a deleted newest character after a restart
  *   (next GUID = MAX(characters.guid) + 1), so the record is deleted with the character, orphan records are purged at
  *   startup, and a record older than the character's creation date is ignored.
+ * - PvP on by default (StartingSetup.PvPDefaultOn): a new player-made character starts with /pvp on, once, at its first login.
+ *   The core saves PLAYER_FLAGS_IN_PVP in characters.playerFlags and restores it at login, so a player's later /pvp off sticks.
+ *   StartingSetup.PvPDefaultOn.RandomBots flags random bots at every login (bots never turn it off themselves).
  * - Every character joins the configured channel (default "World") at every login.
  *   The client's own rejoin then triggers an "already on the channel" notice, which is dropped.
  *
@@ -86,6 +89,8 @@ namespace
         std::string mailBody;
         uint32 mailGold = 0;
         ItemList mailItems;
+        bool pvpDefaultOn = false;
+        bool pvpRandomBots = false;
         bool autoJoinEnable = true;
         std::string autoJoinChannel = "World";
         std::string autoJoinChannelLower = "world";
@@ -161,6 +166,9 @@ namespace
         s.mailBody = sConfigMgr->GetOption<std::string>("StartingSetup.Mail.Body", "");
         s.mailGold = sConfigMgr->GetOption<uint32>("StartingSetup.Mail.Gold", 0);
         s.mailItems = ParseItemList("StartingSetup.Mail.Items", sConfigMgr->GetOption<std::string>("StartingSetup.Mail.Items", ""));
+
+        s.pvpDefaultOn = sConfigMgr->GetOption<bool>("StartingSetup.PvPDefaultOn", false);
+        s.pvpRandomBots = sConfigMgr->GetOption<bool>("StartingSetup.PvPDefaultOn.RandomBots", false);
 
         s.autoJoinEnable = sConfigMgr->GetOption<bool>("StartingSetup.AutoJoin.Enable", true);
         s.autoJoinChannel = sConfigMgr->GetOption<std::string>("StartingSetup.AutoJoin.Channel", "World");
@@ -365,6 +373,15 @@ namespace
             ChatHandler(player->GetSession()).SendSysMessage(newCharacter ? "|cff00cc44[Starting Setup]|r Your starting kit is ready." : "|cff00cc44[Starting Setup]|r Your starting kit has been mailed to you.");
     }
 
+    // Same as typing /pvp on (WorldSession::HandleTogglePvP). OnPlayerLogin runs after the core's own login restore of the flag, so the state is applied here.
+    void TurnPvPOn(Player* player)
+    {
+        if (player->HasPlayerFlag(PLAYER_FLAGS_IN_PVP))
+            return;
+        player->SetPlayerFlag(PLAYER_FLAGS_IN_PVP);
+        player->UpdatePvP(true, true);
+    }
+
     void JoinChannel(Player* player)
     {
         ChannelMgr* mgr = ChannelMgr::forTeam(player->GetTeamId());
@@ -418,8 +435,19 @@ public:
         if (settings.autoJoinEnable && (headless || newCharacter))
             JoinChannel(player);
 
+        if (sRandomPlayerbotMgr.IsRandomBot(player))
+        {
+            if (settings.pvpRandomBots)
+                TurnPvPOn(player);
+            return;
+        }
+
         if (IsKitExcludedBot(player))
             return;
+
+        // Once, at the first login only, so a later /pvp off is never overridden.
+        if (newCharacter && settings.pvpDefaultOn)
+            TurnPvPOn(player);
 
         if (HasKitRecord(player))
         {
