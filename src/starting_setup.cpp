@@ -410,14 +410,16 @@ public:
         if (!settings.enable || !player)
             return;
 
-        if (settings.autoJoinEnable)
+        // Still set here: the core clears it only after OnPlayerLogin (CharacterHandler.cpp).
+        bool newCharacter = player->HasAtLoginFlag(AT_LOGIN_FIRST);
+
+        // Bots have no client to remember channels, so they join at every login. A real client saves its channels per character and rejoins them itself, so players join only on a new character's first login, and a manual /leave sticks.
+        bool headless = player->GetSession() && player->GetSession()->IsHeadless();
+        if (settings.autoJoinEnable && (headless || newCharacter))
             JoinChannel(player);
 
         if (IsKitExcludedBot(player))
             return;
-
-        // Still set here: the core clears it only after OnPlayerLogin (CharacterHandler.cpp).
-        bool newCharacter = player->HasAtLoginFlag(AT_LOGIN_FIRST);
 
         if (HasKitRecord(player))
         {
